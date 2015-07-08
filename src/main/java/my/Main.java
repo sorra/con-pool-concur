@@ -16,6 +16,8 @@ import static java.lang.System.currentTimeMillis;
 import static java.lang.System.out;
 
 // Mainly simulating the scene of a heavy-load RPC system
+// My benchmark of long waits (on MacBook Pro 15):
+//   200 threads -> 0%, 300 threads -> 0.1%, 400 threads -> 0.3%, 500 threads -> 2.6%
 public class Main {
   static DataSource dataSource;
   static AtomicInteger count = new AtomicInteger(0);
@@ -24,11 +26,19 @@ public class Main {
     Properties props = new Properties();
     props.load(Main.class.getClassLoader().getResourceAsStream("db.properties"));
     dataSource = DruidDataSourceFactory.createDataSource(props);
+    // maxActive = 60
+    Connection[] conns = new Connection[60];
+    for (int i = 0; i < 60; i++) {
+      conns[i] = dataSource.getConnection();
+    }
+    for (Connection each : conns) {
+      each.close();
+    }
     multiThreads();
   }
 
   static void multiThreads() throws InterruptedException {
-    int THREADS = 200;
+    int THREADS = 500;
     ExecutorService es = Executors.newFixedThreadPool(THREADS);
     for (int i = 0; i < THREADS; i++) {
       es.submit(() -> {
